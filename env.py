@@ -48,9 +48,9 @@ class Env:
                 valid[12*self.lead_suit+12:] = 0
                 valid[:12*self.lead_suit] = 0
                 return valid
-    def getPoints(self):
-        totalcards = np.sum(self.current_trick, axis=0)
-        return 5*(totalcards[2]+totalcards[14]+totalcards[26]+totalcards[38]) + 10*(totalcards[7]+totalcards[19]+totalcards[28]+totalcards[40]+totalcards[10]+totalcards[22]+totalcards[34]+totalcards[46])
+
+    def getPoints(self, totalcards):
+        return 5*(totalcards[2]+totalcards[14]+totalcards[26]+totalcards[38]) + 10*(totalcards[7]+totalcards[19]+totalcards[31]+totalcards[43]+totalcards[10]+totalcards[22]+totalcards[34]+totalcards[46])
 
     def step(self, action):
         assert self.getValidActions(self.current_player)[action]==1, f"Invalid action {action} for player {self.current_player}"
@@ -61,8 +61,6 @@ class Env:
         self.current_trick[self.current_player][action] += 1
         self.current_player = (self.current_player + 1) % 4
 
-        # print("Processed cards, next to move is:", self.current_player)
-
         if self.current_trick.sum() == 4:
             winner = self.lead_player
             for i in range(3):
@@ -70,23 +68,25 @@ class Env:
                                      self.current_trick[winner].argmax()) == 1:
                     winner = (self.lead_player + i + 1) % 4
             if winner % 2 != self.landlord % 2:
-                self.points += self.getPoints()
+                self.points += self.getPoints(np.sum(self.current_trick, axis=0))
             self.lead_player = winner%4
             self.current_player = self.lead_player
             self.current_trick = np.zeros((4, 54), dtype=int)
 
             if np.sum(self.hands) == 0:
+                if winner % 2 != self.landlord % 2:
+                    print("Kitty:", [CARDMAP[j] for j in np.where(self.kitty==1)[0]], "Kitty Points:", 2*self.getPoints(self.kitty))
+                    self.points += 2*self.getPoints(self.kitty)
                 self.done = True
 
     def get_reward(self, playerNum):
         if self.done:
             if playerNum % 2 == self.landlord % 2:
-                return 5-self.points//40
+                return 5-self.points//20
             else:
-                return self.points//40
+                return self.points//20
         else:
             return 0
-
 
     def getObs(self, playerNum):
         return np.concatenate([self.hands[playerNum%4].flatten(), 
