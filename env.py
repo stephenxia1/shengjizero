@@ -29,6 +29,9 @@ class Env:
                 self.hands[i][self.deck[13*i + j]] += 1
         for i in range(6):
             self.kitty[self.deck[-i-1]] += 1 
+        
+        self.observation_space = self.getObs(self.current_player)
+        self.action_space = np.zeros(54)
 
     def getValidActions(self, playerNum):
         if self.lead_player == playerNum:
@@ -61,6 +64,7 @@ class Env:
         self.current_trick[self.current_player][action] += 1
         self.current_player = (self.current_player + 1) % 4
 
+        # print(self.current_trick.sum(), " cards played in this trick")
         if self.current_trick.sum() == 4:
             winner = self.lead_player
             for i in range(3):
@@ -73,18 +77,26 @@ class Env:
             self.current_player = self.lead_player
             self.current_trick = np.zeros((4, 54), dtype=int)
 
+            # print("cards left in hands:", np.sum(self.hands))
+
             if np.sum(self.hands) == 0:
                 if winner % 2 != self.landlord % 2:
-                    print("Kitty:", [CARDMAP[j] for j in np.where(self.kitty==1)[0]], "Kitty Points:", 2*self.getPoints(self.kitty))
+                    # print("Kitty:", [CARDMAP[j] for j in np.where(self.kitty==1)[0]], "Kitty Points:", 2*self.getPoints(self.kitty))
                     self.points += 2*self.getPoints(self.kitty)
                 self.done = True
+        
+        return self.getObs(self.current_player)
 
     def get_reward(self, playerNum):
         if self.done:
+            ranks = np.ceil(self.points/20).astype(int)
+            if self.points == 0:
+                ranks = 0
+
             if playerNum % 2 == self.landlord % 2:
-                return 5-self.points//20
+                return 2-ranks
             else:
-                return self.points//20
+                return ranks-2
         else:
             return 0
 
@@ -128,21 +140,21 @@ class Env:
             return -1
         
 
-test = Env()
-turn = 0
-print("Landlord:", test.landlord)
-while (not test.done):
-    print("------ROUND", turn, "START------", "Lead Player:", test.lead_player, "Current Player:", test.current_player)
-    # print("Lead Player:", test.lead_player)
-    for i in range(4):
-        # print("Current Player:", test.current_player)
-        # print(test.getValidActions(test.current_player))
-        # print("valid actions:", [CARDMAP[j] for j in np.where(test.getValidActions(test.current_player) == 1)[0]])
-        action = np.random.choice(range(54), p=test.getValidActions(test.current_player)/np.sum(test.getValidActions(test.current_player)))
-        print(test.current_player, "Action:", CARDMAP[action], "   Hand:", [CARDMAP[j] for j in np.where(test.hands[test.current_player] == 1)[0]], " Valid:", [CARDMAP[j] for j in np.where(test.getValidActions(test.current_player) == 1)[0]])
-        test.step(action)
+# test = Env()
+# turn = 0
+# print("Landlord:", test.landlord)
+# while (not test.done):
+#     print("------ROUND", turn, "START------", "Lead Player:", test.lead_player, "Current Player:", test.current_player)
+#     # print("Lead Player:", test.lead_player)
+#     for i in range(4):
+#         # print("Current Player:", test.current_player)
+#         # print(test.getValidActions(test.current_player))
+#         # print("valid actions:", [CARDMAP[j] for j in np.where(test.getValidActions(test.current_player) == 1)[0]])
+#         action = np.random.choice(range(54), p=test.getValidActions(test.current_player)/np.sum(test.getValidActions(test.current_player)))
+#         print(test.current_player, "Action:", CARDMAP[action], "   Hand:", [CARDMAP[j] for j in np.where(test.hands[test.current_player] == 1)[0]], " Valid:", [CARDMAP[j] for j in np.where(test.getValidActions(test.current_player) == 1)[0]])
+#         test.step(action)
     
-    turn+=1
+#     turn+=1
     
-    print("Winner:", test.lead_player)
-    print("Points:", test.points)
+#     print("Winner:", test.lead_player)
+#     print("Points:", test.points)
