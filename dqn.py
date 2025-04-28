@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from collections import deque
-from env import Env
+from env import Env, CARDMAP
 
 # Assume Env class is provided by the user
 # from env_module import Env  
@@ -131,7 +131,7 @@ class DQNAgent:
 def train_dqn(
     env,
     agent,
-    num_episodes=10000,
+    num_episodes=20000,
     target_update_freq=10,
     max_steps_per_episode=200
 ):
@@ -179,6 +179,37 @@ def train_dqn(
 
     return episode_rewards
 
+def evaluate_agent(env, agent, num_episodes=1000):
+    total_rewards = []
+    for episode in range(num_episodes):
+        env.reset()
+        total_reward = 0
+        done = False
+        while not done:
+            while (env.current_player != 0 and not env.done):
+                action = np.random.choice(np.where(env.getValidActions(env.current_player)==1)[0])
+                if episode == 0:
+                    print(f'{env.current_player} is playing {CARDMAP[action]}, HAND: {[CARDMAP[j] for j in np.where(env.hands[env.current_player]==1)[0]]}')
+                env.step(action)
+            action = agent.select_action(env.getObs(0), np.where(env.getValidActions(env.current_player)==1)[0])
+            if episode == 0:
+                print(f'0 is playing {CARDMAP[action]}, HAND: {[CARDMAP[j] for j in np.where(env.hands[env.current_player]==1)[0]]}')
+            env.step(action)
+            while (env.current_player != 0 and not env.done):
+                action = np.random.choice(np.where(env.getValidActions(env.current_player)==1)[0])
+                if episode == 0:
+                    print(f'{env.current_player} is playing {CARDMAP[action]}, HAND: {[CARDMAP[j] for j in np.where(env.hands[env.current_player]==1)[0]]}')
+                env.step(action)
+
+            reward = env.get_reward(0)
+            done = env.done
+            state = env.getObs(0)
+            total_reward += reward
+        total_rewards.append(total_reward)
+    avg_reward = np.mean(total_rewards)
+    print(f"Average Reward over {num_episodes} episodes: {avg_reward:.2f}")
+    return avg_reward
+
 # Example usage:
 if __name__ == "__main__":
     env = Env()  # your environment
@@ -187,3 +218,7 @@ if __name__ == "__main__":
 
     agent = DQNAgent(state_dim, action_dim)
     rewards = train_dqn(env, agent)
+
+    evaluate_agent(env, agent)
+    # Save the model
+    torch.save(agent.online_net.state_dict(), "dqn_model.pth")
