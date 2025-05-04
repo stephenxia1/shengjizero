@@ -19,13 +19,14 @@ def train_self_play(env,
                     agents,
                     num_episodes: int = 1000,
                     seq_len: int = 4,
-                    target_update: int = 10):
+                    target_update: int = 100,
+                    warmup_steps: int = 1000):
     """
     Train multiple DQN agents in self-play on a generic N-player env.
     """
     episode_rewards = [[], [], [], []]
     num_agents = len(agents)
-    for episode in range(1, num_episodes + 1):
+    for episode in range(1, num_episodes + warmup_steps + 1):
         env.reset()
         while not env.done:
             
@@ -36,13 +37,17 @@ def train_self_play(env,
             eps = 0.05 + (0.9 - 0.05) * math.exp(-1. * agent.steps_done/ 200)
 
             state = env.getObs(player)
-            action = agent.select_action(state, [j for j in np.where(env.getValidActions(player)==1)[0]])
+            if episode > warmup_steps:
+                action = agent.select_action(state, [j for j in np.where(env.getValidActions(player)==1)[0]])
+            else:
+                action = np.random.choice(np.where(env.getValidActions(player)==1)[0])
             env.step(action)
             # print(f'Player {env.current_player} action: {CARDMAP[action]}')
             next_state = env.getObs(player)
             reward = env.get_reward(player)            
             agent.buffer.push(state, action, reward, next_state, env.done)
-            agent.update()
+            if episode > warmup_steps:
+                agent.update()
             agent.steps_done += 1
         
         for player in range(num_agents):
@@ -70,6 +75,9 @@ def evaluate_self_play(env, agents, num_episodes: int = 1000):
             action = agent.select_action(state, [j for j in np.where(env.getValidActions(player)==1)[0]])
             env.step(action)
             if (episode == 0):
+                values = agent.online_net(torch.FloatTensor(state).unsqueeze(0)).detach().numpy().squeeze()
+                cardvalues = {CARDMAP[j] : float(values[j]) for j in range(len(values))}
+                print(f'Player {env.current_player} action values: {cardvalues}')
                 print(f'{env.current_player} is playing {CARDMAP[action]}, HAND: {[CARDMAP[j] for j in np.where(env.hands[env.current_player]==1)[0]]}')
         
         for player in range(num_agents):

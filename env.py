@@ -94,9 +94,9 @@ class Env:
                 ranks = 0
 
             if playerNum % 2 == self.landlord % 2:
-                return 2-ranks
+                return -ranks
             else:
-                return ranks-2
+                return ranks
         else:
             return 0
 
