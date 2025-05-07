@@ -217,3 +217,6 @@ if __name__ == "__main__":
     print(f"Final Points: {env.points}")
     for i in range(num_agents):
         print(f"Player {i} reward: {env.get_reward(i)}")
+    
+    # Save the model
+    torch.save(agent.policy_net.state_dict(), "dqnlstm_model.pth")
