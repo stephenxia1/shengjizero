@@ -10,7 +10,6 @@ from collections import deque
 from env1 import Env1
 from dqn  import QNetwork
 
-# Simple replay buffer definition
 class ReplayBuffer:
     def __init__(self, capacity):
         self.buffer = deque(maxlen=capacity)
@@ -52,7 +51,7 @@ def train_dqn(episodes=10000, batch_size=64, gamma=0.99, lr=1e-3,
 
         while not done:
             state = torch.from_numpy(np.array(obs, dtype=np.float32)).unsqueeze(0)
-            # ε-greedy action
+            
             if random.random() < eps:
                 valid = env.getValidActions(env.current_player)
                 action = int(np.random.choice(np.where(valid==1)[0]))
@@ -70,7 +69,6 @@ def train_dqn(episodes=10000, batch_size=64, gamma=0.99, lr=1e-3,
             obs = next_obs
             total_reward += reward
 
-            # optimization step
             if len(replay) >= batch_size:
                 s_b, a_b, r_b, ns_b, d_b = replay.sample(batch_size)
                 s_b  = torch.from_numpy(s_b.astype(np.float32))
@@ -89,9 +87,7 @@ def train_dqn(episodes=10000, batch_size=64, gamma=0.99, lr=1e-3,
                 loss.backward()
                 optimizer.step()
 
-        # decay epsilon
         eps = max(eps_end, eps * np.exp(-1.0/eps_decay))
-        # update target
         if ep % target_update == 0:
             target_net.load_state_dict(policy_net.state_dict())
 
@@ -99,11 +95,9 @@ def train_dqn(episodes=10000, batch_size=64, gamma=0.99, lr=1e-3,
         if ep % 10 == 0:
             print(f"Episode {ep}/{episodes} Return={total_reward:.2f} Eps={eps:.2f}")
 
-    # save model
     torch.save(policy_net.state_dict(), 'dqn_model.pth')
     print('Training complete, saved dqn_model.pth')
 
-    # plot
     plt.figure()
     plt.plot(range(1, episodes+1), returns)
     plt.xlabel('Episode')

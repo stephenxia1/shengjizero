@@ -9,7 +9,6 @@ from env import Env, CARDMAP
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Shared model definitions
 class DQNLSTM(nn.Module):
     def __init__(self, input_dim, hidden_dim, action_dim, num_layers=1):
         super(DQNLSTM, self).__init__()
@@ -28,19 +27,19 @@ class DQNLSTM(nn.Module):
         c0 = torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(device)
         return (h0, c0)
 
-# Simple replay buffer for learner
+
 class ReplayBuffer:
     def __init__(self, capacity):
         self.buffer = deque(maxlen=capacity)
 
     def push(self, transition):
-        # ignore None transitions
+
         if transition is None:
             return
         self.buffer.append(transition)
 
     def sample(self, batch_size):
-        # filter out any None if present
+
         valid_buf = [t for t in self.buffer if t is not None]
         batch = random.sample(valid_buf, batch_size)
         return zip(*batch)
@@ -48,7 +47,7 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
-# Actor process: collects experiences and pushes to queue
+
 def actor_loop(pid, policy_state_dict, exp_queue, stop_flag, warmup_steps, eps_start, eps_end, eps_decay):
     torch.manual_seed(pid)
     env = Env()
@@ -80,7 +79,7 @@ def actor_loop(pid, policy_state_dict, exp_queue, stop_flag, warmup_steps, eps_s
         done = env.done
         next_hidden = hidden
 
-        # push experience, skip None
+        
         exp_queue.put((state, hidden, action, reward, next_state, next_hidden, done))
 
         state = next_state
@@ -88,10 +87,10 @@ def actor_loop(pid, policy_state_dict, exp_queue, stop_flag, warmup_steps, eps_s
         if done:
             state = env.reset()
             hidden = model.init_hidden()
-    # signal termination for each actor
+
     exp_queue.put(None)
 
-# Learner: reads from queue, updates model
+
 def learner_loop(num_actors, policy_net, target_net, exp_queue, stop_flag,
                  buffer_size, batch_size, gamma, target_update, warmup_steps):
     optimizer = optim.Adam(policy_net.parameters(), lr=1e-3)
@@ -108,10 +107,9 @@ def learner_loop(num_actors, policy_net, target_net, exp_queue, stop_flag,
             continue
 
         state, hidden, action, reward, next_state, next_hidden, done = item
-        # store only valid transitions
+
         replay.push((state, hidden, action, reward, next_state, next_hidden, done))
 
-        # optimize if enough samples
         if len(replay) > batch_size and steps > warmup_steps:
             states, hiddens, actions, rewards, next_states, next_hiddens, dones = replay.sample(batch_size)
             sb = torch.FloatTensor(np.array(states)).unsqueeze(1).to(device)

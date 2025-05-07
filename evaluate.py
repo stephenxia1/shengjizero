@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 import argparse
 import torch
 import inspect
@@ -8,7 +8,6 @@ import numpy as np
 from dqn import QNetwork
 from env1 import Env1
 
-# ──────────────────────────────────────────────────────────────────────────────
 def inspect_pth(path: str, map_location: str = "cpu"):
     """
     Load and display contents of a .pth checkpoint.
@@ -27,7 +26,7 @@ def inspect_pth(path: str, map_location: str = "cpu"):
         print("[inspect] Raw contents:", data)
     return data
 
-# ──────────────────────────────────────────────────────────────────────────────
+
 def infer_dims_from_state_dict(sd: dict):
     """
     Infer (state_dim, action_dim) by scanning net.<i>.weight shapes.
@@ -37,7 +36,7 @@ def infer_dims_from_state_dict(sd: dict):
     for k, v in sd.items():
         m = pat.match(k)
         if m:
-            layers[int(m.group(1))] = tuple(v.shape)  # (out_features, in_features)
+            layers[int(m.group(1))] = tuple(v.shape) 
     if not layers:
         raise ValueError("No net.<i>.weight keys found in state_dict")
     first, last = min(layers), max(layers)
@@ -45,7 +44,7 @@ def infer_dims_from_state_dict(sd: dict):
     out_last, in_last = layers[last]
     return in_first, out_last
 
-# ──────────────────────────────────────────────────────────────────────────────
+
 def dummy_evaluate(model: torch.nn.Module, input_dim: int, runs: int = 3):
     """
     Perform a few random forward passes to sanity-check the model.
@@ -56,7 +55,7 @@ def dummy_evaluate(model: torch.nn.Module, input_dim: int, runs: int = 3):
         y = model(x)
         print(f"  • run {i:>2}: output shape={tuple(y.shape)}")
 
-# ──────────────────────────────────────────────────────────────────────────────
+
 def evaluate_on_env(env, model: torch.nn.Module, state_dim: int, device: torch.device, num_eps: int = 10):
     """
     Greedy evaluation on a custom Env with action masking.
@@ -70,7 +69,6 @@ def evaluate_on_env(env, model: torch.nn.Module, state_dim: int, device: torch.d
         total_reward = 0.0
 
         while not done:
-            # flatten to 1D numpy array
             obs_arr = np.array(obs, dtype=np.float32).flatten()
             if obs_arr.size != state_dim:
                 raise RuntimeError(
@@ -78,17 +76,17 @@ def evaluate_on_env(env, model: torch.nn.Module, state_dim: int, device: torch.d
                 )
             state = torch.from_numpy(obs_arr).unsqueeze(0).to(device)
 
-            # compute Q-values
-            with torch.no_grad():
-                q_vals = model(state)  # shape [1, action_dim]
 
-            # mask invalid actions
+            with torch.no_grad():
+                q_vals = model(state) 
+
+
             valid = env.getValidActions(env.current_player).astype(bool)
             mask = torch.from_numpy(valid).to(device).unsqueeze(0)
             masked_q = q_vals.masked_fill(~mask, -float('inf'))
             action = int(masked_q.argmax(dim=1).item())
 
-            # step env
+
             obs, reward, done, _ = env.step(action)
             total_reward += reward
 
@@ -96,10 +94,10 @@ def evaluate_on_env(env, model: torch.nn.Module, state_dim: int, device: torch.d
         print(f"  • Episode {ep:2d}: Return = {total_reward}")
 
     avg = sum(returns) / len(returns)
-    print(f"\n✅ Average return: {avg}")
+    print(f"Average return: {avg}")
     return returns
 
-# ──────────────────────────────────────────────────────────────────────────────
+
 def main():
     parser = argparse.ArgumentParser(
         description="Load a .pth and evaluate on custom Env"
@@ -118,23 +116,23 @@ def main():
     )
     args = parser.parse_args()
 
-    # inspect & infer dims
+
     ckpt = inspect_pth(args.model_path)
     sd = ckpt.get("state_dict", ckpt)
     state_dim, action_dim = infer_dims_from_state_dict(sd)
     print(f"\n[infer] state_dim={state_dim}, action_dim={action_dim}\n")
 
-    # load model
+
     from dqn import QNetwork
     model = QNetwork(state_dim, action_dim)
     model.load_state_dict(sd)
     model.eval()
     device = torch.device("cpu")
 
-    # dummy forward passes
+
     dummy_evaluate(model, input_dim=state_dim, runs=args.dummy_runs)
 
-    # evaluation on custom environment
+
     env = Env1()
     evaluate_on_env(env, model, state_dim, device, num_eps=args.episodes)
 

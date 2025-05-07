@@ -7,13 +7,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-# Import your existing DQNAgent (e.g., with LSTM) or replace with any DQN implementation
+
 from dqn import *
 import env
 
-# Generic multi-player environment interface:
-# env.reset() -> state
-# env.step(actions_tuple) -> next_state, rewards_tuple, done, info
 
 def train_self_play(env,
                     agents,
@@ -21,9 +18,7 @@ def train_self_play(env,
                     seq_len: int = 4,
                     target_update: int = 100,
                     warmup_steps: int = 1000):
-    """
-    Train multiple DQN agents in self-play on a generic N-player env.
-    """
+    
     episode_rewards = [[], [], [], []]
     num_agents = len(agents)
     for episode in range(1, num_episodes + warmup_steps + 1):
@@ -33,7 +28,6 @@ def train_self_play(env,
             player = env.current_player
             agent = agents[player]
             
-            # ε-greedy threshold shared or per-agent
             eps = 0.05 + (0.9 - 0.05) * math.exp(-1. * agent.steps_done/ 200)
 
             state = env.getObs(player)
@@ -42,7 +36,6 @@ def train_self_play(env,
             else:
                 action = np.random.choice(np.where(env.getValidActions(player)==1)[0])
             env.step(action)
-            # print(f'Player {env.current_player} action: {CARDMAP[action]}')
             next_state = env.getObs(player)
             reward = env.get_reward(player)            
             agent.buffer.push(state, action, reward, next_state, env.done)
@@ -61,9 +54,7 @@ def train_self_play(env,
                 print(f"Episode {episode}/{num_episodes}, Agent {player} Average Reward: {avg_reward:.2f}")
 
 def evaluate_self_play(env, agents, num_episodes: int = 1000):
-    """
-    Evaluate multiple DQN agents in self-play on a generic N-player env.
-    """
+
     total_rewards = [[], [], [], []]
     num_agents = len(agents)
     for episode in range(num_episodes):
@@ -95,10 +86,8 @@ if __name__ == "__main__":
     hidden_dim = 128
     num_agents = 4
 
-    # Instantiate agents
     agents = [DQNAgent(state_dim, action_dim) for _ in range(num_agents)]
 
-    # Train in self-play
     train_self_play(env, agents, num_episodes=10000)
     for i in range(len(agents)):
         torch.save(agents[i].online_net.state_dict(), f"agent{i}.pth")

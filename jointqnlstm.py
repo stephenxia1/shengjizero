@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 import os
 import random
 import argparse
@@ -12,20 +12,14 @@ from env1 import Env1
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class JointDQNLSTM(nn.Module):
-    """
-    Joint DQN with LSTM encoders for seats 0 and 2.
-    Each seat has its own LSTM; final hidden states are concatenated
-    and fed into a joint Q-network head.
-    """
     def __init__(self, state_dim, hidden_dim, action_dim, num_layers=1):
         super(JointDQNLSTM, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
         self.action_dim = action_dim
-        # LSTM encoders for each seat
         self.lstm0 = nn.LSTM(state_dim, hidden_dim, num_layers, batch_first=True)
         self.lstm2 = nn.LSTM(state_dim, hidden_dim, num_layers, batch_first=True)
-        # Joint Q head
+
         self.fc1 = nn.Linear(2 * hidden_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.out = nn.Linear(hidden_dim, action_dim * action_dim)
@@ -33,7 +27,6 @@ class JointDQNLSTM(nn.Module):
     def forward(self, seq0, seq2, h0=None, h2=None):
         out0, h0 = self.lstm0(seq0, h0)
         out2, h2 = self.lstm2(seq2, h2)
-        # take last output
         o0 = out0[:, -1, :]
         o2 = out2[:, -1, :]
         x = torch.relu(self.fc1(torch.cat([o0, o2], dim=-1)))
@@ -50,7 +43,6 @@ class ReplayBuffer:
 
     def sample(self, bs):
         batch = random.sample(self.buffer, bs)
-        # return as lists to avoid numpy conversion errors
         seq0_b, seq2_b, a0_b, a2_b, r_b, ns0_b, ns2_b, d_b = zip(*batch)
         return seq0_b, seq2_b, a0_b, a2_b, r_b, ns0_b, ns2_b, d_b
 
@@ -89,9 +81,7 @@ def train_joint_lstm(
 
         while not done:
             player = env.current_player
-            # --- joint seats action ---
             if player in (0, 2):
-                # epsilon-greedy joint selection
                 if random.random() < eps:
                     va0 = np.where(env.getValidActions(0) == 1)[0]
                     va2 = np.where(env.getValidActions(2) == 1)[0]
@@ -108,7 +98,7 @@ def train_joint_lstm(
                     a0, a2 = np.unravel_index(qgrid.argmax(), qgrid.shape)
                 action = a0 if player == 0 else a2
 
-                                # validate and step env
+                       
                 valid_cur = np.where(env.getValidActions(player)==1)[0]
                 if action not in valid_cur:
                     if valid_cur.size > 0:
@@ -120,18 +110,18 @@ def train_joint_lstm(
                 if done:
                     team_return = env.get_reward(0) + env.get_reward(2)
 
-                # next obs
+       
                 ns0 = env.getObs(0)
                 ns2 = env.getObs(2)
 
-                # store transition
+                
                 replay.push(
                     seq0.copy(), seq2.copy(), a0, a2,
                     team_return if done else 0,
                     seq0.copy(), seq2.copy(), done
                 )
 
-            # --- opponents random ---
+            
             else:
                 valid = env.getValidActions(player)
                 opts = np.where(valid == 1)[0]
@@ -139,17 +129,16 @@ def train_joint_lstm(
                 env.step(action)
                 done = env.done
 
-            # append new observations
+            
             seq0.append(env.getObs(0))
             seq2.append(env.getObs(2))
 
-            # optimize
+            
             if len(replay) >= batch_size:
                 s0_b, s2_b, a0_b, a2_b, r_b, ns0_b, ns2_b, d_b = replay.sample(batch_size)
-                # TODO: implement sequence padding/truncation and learning step
                 pass
 
-            # update epsilon & target
+            
             steps += 1
             eps = max(eps_end, eps_start * np.exp(-steps / eps_decay))
             if steps % target_update == 0:

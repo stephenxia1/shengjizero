@@ -7,9 +7,6 @@ import torch.optim as optim
 from collections import deque
 from env import Env, CARDMAP
 
-# Assume Env class is provided by the user
-# from env_module import Env  
-
 class QNetwork(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(QNetwork, self).__init__()
@@ -76,27 +73,22 @@ class DQNAgent:
         self.steps_done = 0
 
     def select_action(self, state, valid_actions):
-        """
-        state:      np.array or list representing the current state
-        valid_actions:  list of ints, e.g. env.getValidActions()
-        """
-        # compute decaying epsilon
+    
         epsilon = self.epsilon_final + (self.epsilon_start - self.epsilon_final) * \
             np.exp(-1. * self.steps_done / self.epsilon_decay)
         self.steps_done += 1
 
-        # exploration: uniformly sample among valid actions
         if random.random() < epsilon:
             return random.choice(valid_actions)
 
-        # otherwise, greedily pick the valid action with highest Q
-        state_v = torch.FloatTensor(state).unsqueeze(0)  # shape [1, state_dim]
+        
+        state_v = torch.FloatTensor(state).unsqueeze(0)  
         with torch.no_grad():
-            q_vals = self.online_net(state_v).cpu().numpy().squeeze()  # shape [action_dim,]
+            q_vals = self.online_net(state_v).cpu().numpy().squeeze()  
 
-        # pick the valid action with max Q-value
-        valid_qs = q_vals[valid_actions]                         # vector of Qs for valid actions
-        best_idx = valid_actions[int(np.argmax(valid_qs))]       # map back to full action-space index
+        
+        valid_qs = q_vals[valid_actions]                         
+        best_idx = valid_actions[int(np.argmax(valid_qs))]       
         return best_idx
 
 
@@ -112,10 +104,10 @@ class DQNAgent:
         next_states_v = torch.FloatTensor(next_states)
         dones_v = torch.ByteTensor(dones).unsqueeze(1)
 
-        # Compute current Q estimates
+
         q_values = self.online_net(states_v).gather(1, actions_v)
 
-        # Compute target Q values
+
         next_q_values = self.target_net(next_states_v).max(1)[0].unsqueeze(1)
         target_q_values = rewards_v + self.gamma * next_q_values * (1 - dones_v.float())
 
@@ -152,7 +144,6 @@ def train_dqn(
             env.step(action)
 
             while (env.current_player != 0 and not env.done):
-                # print(f'{env.current_player} is playing')
                 env.step(np.random.choice(np.where(env.getValidActions(env.current_player)==1)[0]))
 
             reward = env.get_reward(0)
@@ -160,7 +151,7 @@ def train_dqn(
             next_state = env.getObs(0)
 
             agent.buffer.push(state, action, reward, next_state, done)
-            # print("Agent updating...")
+
             agent.update()
             state = next_state
             total_reward += reward
@@ -210,9 +201,9 @@ def evaluate_agent(env, agent, num_episodes=1000):
     print(f"Average Reward over {num_episodes} episodes: {avg_reward:.2f}")
     return avg_reward
 
-# Example usage:
+
 if __name__ == "__main__":
-    env = Env()  # your environment
+    env = Env() 
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
 

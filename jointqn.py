@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 import os
 import random
 import argparse
@@ -10,9 +10,6 @@ from collections import deque
 
 from env1 import Env1
 
-# -----------------------------------------------------------------------------
-# 1) Joint-Q network: takes two seat-states and outputs Q-values for all (a0,a2)
-# -----------------------------------------------------------------------------
 class JointQNetwork(nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim, num_layers=1):
         super(JointQNetwork, self).__init__()
@@ -22,17 +19,12 @@ class JointQNetwork(nn.Module):
         self.out = nn.Linear(hidden_dim, action_dim * action_dim)
 
     def forward(self, s0, s2):
-        # s0, s2: [batch, state_dim]
         x = torch.cat([s0, s2], dim=-1)
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        q = self.out(x)  # [batch, action_dim^2]
-        # reshape into joint-action grid
+        q = self.out(x) 
         return q.view(-1, self.action_dim, self.action_dim)
 
-# -----------------------------------------------------------------------------
-# 2) Replay buffer for joint transitions
-# -----------------------------------------------------------------------------
 class ReplayBuffer:
     def __init__(self, capacity):
         self.buffer = deque(maxlen=capacity)
@@ -48,9 +40,6 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
-# -----------------------------------------------------------------------------
-# 3) Train function with CLI for output path
-# -----------------------------------------------------------------------------
 
 def train_joint_dqn(
     episodes,
@@ -81,7 +70,6 @@ def train_joint_dqn(
     eps = eps_start
 
     for ep in range(1, episodes+1):
-        # initialize both seats' obs
         env.reset()
         obs0 = env.getObs(0)
         obs2 = env.getObs(2)
@@ -91,7 +79,6 @@ def train_joint_dqn(
         while not done:
             player = env.current_player
             if player in (0,2):
-                # choose joint action
                 if random.random() < eps:
                     va0 = np.where(env.getValidActions(0)==1)[0]
                     va2 = np.where(env.getValidActions(2)==1)[0]
@@ -107,29 +94,24 @@ def train_joint_dqn(
                     qjoint[~mask] = -np.inf
                     a0, a2 = np.unravel_index(qjoint.argmax(), qjoint.shape)
                 action = a0 if player==0 else a2
-                # ensure action is valid for current player
                 valid_actions = np.where(env.getValidActions(player)==1)[0]
                 if action not in valid_actions:
-                    # fallback to random valid
                     if valid_actions.size > 0:
                         action = int(random.choice(valid_actions))
                     else:
-                        action = 0  # no valid card? default to 0
+                        action = 0 
 
-                # take step
                 env.step(action)
                 done = env.done
                 if done:
                     team_return = env.get_reward(0) + env.get_reward(2)
                 ns0, ns2 = env.getObs(0), env.getObs(2)
-                # store transition
                 replay.push(obs0, obs2, a0, a2,
                             team_return if done else 0,
                             ns0, ns2,
                             done)
                 obs0, obs2 = ns0, ns2
 
-                # optimize
                 if len(replay) >= batch_size:
                     s0_b, s2_b, a0_b, a2_b, r_b, ns0_b, ns2_b, d_b = replay.sample(batch_size)
                     s0_b = torch.from_numpy(s0_b).float()
@@ -141,11 +123,9 @@ def train_joint_dqn(
                     r_b  = torch.from_numpy(r_b).float()
                     d_b  = torch.from_numpy(d_b.astype(np.float32)).float()
 
-                    # predicted Q for chosen joint actions
                     q_pred = policy(s0_b, s2_b)
                     q_pred = q_pred[torch.arange(batch_size), a0_b, a2_b]
 
-                    # target Q: max over all joint actions
                     with torch.no_grad():
                         q_next = target(ns0_b, ns2_b)
                         q_next = q_next.view(batch_size, -1).max(1)[0]
@@ -156,17 +136,14 @@ def train_joint_dqn(
                     loss.backward()
                     optimizer.step()
 
-                # update eps and target
                 steps += 1
                 eps = max(eps_end, eps_start * np.exp(-steps / eps_decay))
                 if steps % target_update == 0:
                     target.load_state_dict(policy.state_dict())
 
             else:
-                # opponent random
                 valid = env.getValidActions(player)
                 choices = np.where(valid == 1)[0]
-                # fallback if no valid actions
                 if choices.size == 0:
                     choices = np.arange(action_dim)
                 action = int(random.choice(choices))
@@ -176,13 +153,12 @@ def train_joint_dqn(
         if ep % 50 == 0:
             print(f"Episode {ep}/{episodes}, Team Return={team_return:.2f}, eps={eps:.3f}")
 
-    # save checkpoint
     torch.save(policy.state_dict(), model_path)
     print(f"Training complete. Joint model saved to {model_path}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--episodes',   type=int, default=2000)
+    parser.add_argument('--episodes',   type=int, default=20000)
     parser.add_argument('--model-path', type=str, default='joint_team_dqn.pth')
     args = parser.parse_args()
     train_joint_dqn(args.episodes, args.model_path)
