@@ -1,3 +1,5 @@
+
+
 #!/usr/bin/env python3
 import os
 import glob
@@ -22,7 +24,7 @@ def load_model_auto(path, state_dim, action_dim):
     return model
 
 
-def evaluate_model(model, env_cls, episodes=100):
+def evaluate_model(model, env_cls, episodes=5000):
     """
     Run `episodes` in `env_cls` with `model`, returning:
       - returns: list of 4-tuples (r0,r1,r2,r3) per episode
@@ -37,7 +39,7 @@ def evaluate_model(model, env_cls, episodes=100):
     for _ in range(episodes):
         env = env_cls()
         obs = env.reset()
-        flags.append(env.landlord % 2)
+        flags.append(1 - env.landlord % 2)
         done = False
         hidden = None
 
@@ -178,3 +180,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
