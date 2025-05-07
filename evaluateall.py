@@ -25,12 +25,7 @@ def load_model_auto(path, state_dim, action_dim):
 
 
 def evaluate_model(model, env_cls, episodes=5000):
-    """
-    Run `episodes` in `env_cls` with `model`, returning:
-      - returns: list of 4-tuples (r0,r1,r2,r3) per episode
-      - leads: list of first-play card indices
-      - flags: list of landlord parity (0 for seats 0&2, 1 for seats 1&3)
-    """
+    
     returns = []
     leads   = []
     flags   = []
@@ -103,9 +98,9 @@ def main():
         returns, leads, flags = evaluate_model(model, Env1, episodes)
         all_leads.extend(leads)
 
-        # build team-level return lists
-        team0 = []  # seats 0 & 2
-        team1 = []  # seats 1 & 3
+        
+        team0 = []  
+        team1 = []  
         for (r0,r1,r2,r3), f in zip(returns, flags):
             if f == 0:
                 team0.append(r0 + r2)
@@ -120,7 +115,7 @@ def main():
         print(f"  {name}: team0_eps={c0}, mean0={m0:.2f}, std0={s0:.2f}; "
               f"team1_eps={c1}, mean1={m1:.2f}, std1={s1:.2f}")
 
-        # per-episode returns of team0/team1 for plotting
+        
         ep_returns = [ (r0+r2) if f==0 else (r1+r3)
                        for (r0,r1,r2,r3), f in zip(returns, flags) ]
         plt.figure()
@@ -132,8 +127,8 @@ def main():
         plt.savefig(f"{name}_team_returns.png")
         plt.close()
 
-        # per-seat bar chart (one bar per agent)
-    # build per-seat filtered returns
+        
+
     seat_returns = {p: [] for p in range(4)}
     for (r0, r1, r2, r3), f in zip(returns, flags):
         if f == 0:
@@ -157,7 +152,6 @@ def main():
     plt.savefig('per_seat_comparison.png')
     plt.show()
 
-    # lead-rank frequency
     rank_labels = ['A','K','Q','J','10','9','8','7','6','5','4','3','2','Joker']
     rank_map = {}
     for idx in range(54):

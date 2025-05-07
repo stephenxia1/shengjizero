@@ -81,7 +81,7 @@ class Env:
 
             if np.sum(self.hands) == 0:
                 if winner % 2 != self.landlord % 2:
-                    # print("Kitty:", [CARDMAP[j] for j in np.where(self.kitty==1)[0]], "Kitty Points:", 2*self.getPoints(self.kitty))
+
                     self.points += 2*self.getPoints(self.kitty)
                 self.done = True
         
@@ -118,9 +118,7 @@ class Env:
                               ])
 
     def compareCards(self, card1, card2):
-        '''
-        1 if card1 > card2, 0 if card1 == card2, -1 if card1 < card2
-        '''
+        
         if card1 == card2:
             return 0
         if card1 >= 36 and card2 >= 36:
@@ -139,22 +137,3 @@ class Env:
         if card1 // 12 != self.lead_suit and card2 // 12 == self.lead_suit:
             return -1
         
-
-# test = Env()
-# turn = 0
-# print("Landlord:", test.landlord)
-# while (not test.done):
-#     print("------ROUND", turn, "START------", "Lead Player:", test.lead_player, "Current Player:", test.current_player)
-#     # print("Lead Player:", test.lead_player)
-#     for i in range(4):
-#         # print("Current Player:", test.current_player)
-#         # print(test.getValidActions(test.current_player))
-#         # print("valid actions:", [CARDMAP[j] for j in np.where(test.getValidActions(test.current_player) == 1)[0]])
-#         action = np.random.choice(range(54), p=test.getValidActions(test.current_player)/np.sum(test.getValidActions(test.current_player)))
-#         print(test.current_player, "Action:", CARDMAP[action], "   Hand:", [CARDMAP[j] for j in np.where(test.hands[test.current_player] == 1)[0]], " Valid:", [CARDMAP[j] for j in np.where(test.getValidActions(test.current_player) == 1)[0]])
-#         test.step(action)
-    
-#     turn+=1
-    
-#     print("Winner:", test.lead_player)
-#     print("Points:", test.points)
