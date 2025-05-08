@@ -1,4 +1,4 @@
-
+# Joint LSTM vs Random
 import os
 import random
 import argparse

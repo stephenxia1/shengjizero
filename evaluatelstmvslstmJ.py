@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# Joint LSTM vs Regular LSTM
 import os
 import random
 import torch

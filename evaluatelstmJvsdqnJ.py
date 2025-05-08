@@ -1,4 +1,4 @@
-
+# Joint LSTM vs Joint DQN
 import os
 import random
 import torch

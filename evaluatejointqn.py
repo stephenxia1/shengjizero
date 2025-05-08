@@ -1,4 +1,4 @@
-
+# Joint DQN vs Random
 import os
 import random
 import torch
