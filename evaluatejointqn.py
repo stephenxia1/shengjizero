@@ -11,7 +11,7 @@ from env1    import Env1
 from collections import Counter
 
 
-def evaluate_joint_dqn(model_path, episodes=1000):
+def evaluate_joint_dqn(model_path, episodes):
     env = Env1()
     state_dim  = int(np.prod(env.observation_space.shape))
     action_dim = int(env.action_space.n)

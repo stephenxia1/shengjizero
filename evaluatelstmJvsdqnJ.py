@@ -13,7 +13,7 @@ from collections import Counter
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def evaluate_mixed_joint(path1, path2, episodes=500):
+def evaluate_mixed_joint(path1, path2, episodes):
     env = Env1()
     state_dim = int(np.prod(env.observation_space.shape))
     action_dim = int(env.action_space.n)

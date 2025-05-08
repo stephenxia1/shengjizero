@@ -13,7 +13,7 @@ from env1 import Env1
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def evaluate_joint_lstm(model_path, episodes=100):
+def evaluate_joint_lstm(model_path, episodes):
     env = Env1()
     state_dim  = env.observation_space.shape[0]
     action_dim = env.action_space.n
